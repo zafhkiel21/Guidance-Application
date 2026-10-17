@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "933275008273",
+    "project_id": "my-guidance-1f8d9",
+    "storage_bucket": "my-guidance-1f8d9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:933275008273:android:7c472a9537b4cbc504a0b0",
+        "android_client_info": {
+          "package_name": "com.example.myguidance"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAyELynnqGOYESh7YNBSZ3R6NTHeXhhPw8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
