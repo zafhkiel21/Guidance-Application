@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -34,18 +35,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScheduleAppointmentDesign(
+    report: Report,
     reportId: String = "",
     targetUserId: String = "",
     authViewModel: AuthViewModel,
@@ -67,6 +73,7 @@ fun ScheduleAppointmentDesign(
     var showEndTimePicker by remember { mutableStateOf(false) }
 
     var purposeText by remember { mutableStateOf("") }
+
 
     val profile by profileViewModel.userProfile.collectAsState()
     val userRole by authViewModel.userRole.collectAsState()
@@ -233,7 +240,10 @@ fun ScheduleAppointmentDesign(
             }
 
             Spacer(modifier = Modifier.height(12.dp))
-
+            if(report.peopleInvolved.isNotEmpty()){
+                ReportPeopleChecklist(report = report)
+            }
+            Spacer(modifier = Modifier.height(12.dp))
             // Action Button
             Button(
                 onClick = {
@@ -332,4 +342,86 @@ private fun endsInThePast(dateMillis: Long, endHour: Int, endMinute: Int): Boole
         set(java.util.Calendar.MILLISECOND, 0)
     }
     return end.timeInMillis <= System.currentTimeMillis()
+}
+// 1. Create a local helper data class right above your screen (or inside it)
+data class SelectablePerson(
+    val name: String,
+    val role: String,
+    val idNumber: String,
+    val course: String,
+    val year: String,
+    val section: String,
+    val isChecked: Boolean = false
+)
+
+@Composable
+fun ReportPeopleChecklist(report: Report) {
+    val selectablePeople = remember(report.peopleInvolved) {
+        mutableStateListOf<SelectablePerson>().apply {
+            addAll(report.peopleInvolved.map { map ->
+                SelectablePerson(
+                    name = map["name"] ?: "",
+                    role = map["role"] ?: "",
+                    idNumber = map["idList"] ?: "",
+                    course = map["course"] ?: "",
+                    year = map["year"] ?: "",
+                    section = map["section"] ?: ""
+                )
+            })
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "Select People Involved for Schedule",
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // 3. Render each person with a checkbox
+        selectablePeople.forEachIndexed { index, person ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        selectablePeople[index] = person.copy(isChecked = !person.isChecked)
+                    }
+                    .padding(vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "${person.name} (${person.role})",
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 14.sp
+                    )
+                    Text(
+                        text = "ID: ${person.idNumber} • ${person.course} ${person.year} - ${person.section}",
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+                }
+
+                Checkbox(
+                    checked = person.isChecked,
+                    onCheckedChange = { checked ->
+                        selectablePeople[index] = person.copy(isChecked = checked)
+                    }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // 4. How to grab who was checked when submitting/saving:
+        Button(onClick = {
+            val checkedPeople = selectablePeople.filter { it.isChecked }
+            // Do something with checkedPeople...
+        }) {
+            Text("Confirm Selected People")
+        }
+    }
 }

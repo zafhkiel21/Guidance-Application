@@ -191,6 +191,7 @@ fun AppNavigation(
             val targetUserId = backStackEntry.arguments?.getString("targetUserId") ?: ""
 
             AccentTheme { ScheduleAppointmentDesign(
+            report = postViewModel.reportsList.collectAsState().value.find { it.reportId == reportId } ?: Report(),
             reportId = reportId,
             targetUserId = targetUserId,authViewModel = authViewModel,
             scheduleViewModel = viewModel(),

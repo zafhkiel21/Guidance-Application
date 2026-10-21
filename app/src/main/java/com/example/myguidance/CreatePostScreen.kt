@@ -102,6 +102,17 @@ fun CreatePostScreen(
     val peopleList = remember { mutableStateListOf<PersonInvolved>() }
     val profile by profileViewModel.userProfile.collectAsState()
     val userRole by authViewModel.userRole.collectAsState()
+
+    if (userRole == UserRole.UNKNOWN) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+            contentAlignment = Alignment.Center
+        ) { CircularProgressIndicator() }
+        return
+    }
+
     val userIdNumber by authViewModel.userIdNumber.collectAsState()
     val isStudent = userRole.isStudent
     var isReport by remember(userRole) { mutableStateOf(isStudent) }
@@ -176,6 +187,7 @@ fun CreatePostScreen(
     val formattedDate = formatDate(selectedDateInMillis)
     val formattedStartTime = formatTime(startHour, startMinute)
     val formattedEndTime = formatTime(endHour, endMinute)
+
 
     Scaffold(
         topBar = {

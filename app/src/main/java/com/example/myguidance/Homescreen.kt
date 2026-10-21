@@ -1,6 +1,5 @@
 package com.example.myguidance
 
-import android.text.format.DateUtils
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -31,9 +30,7 @@ import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.Analytics
 import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Report
 import androidx.compose.material.icons.outlined.Settings
@@ -43,6 +40,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -50,7 +48,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -162,299 +159,314 @@ fun HomeScreenContent(
         }
     }
 
+    if (userRole != UserRole.UNKNOWN && userRole.canCreatePost) {
+        Scaffold(
+            floatingActionButton = {
+                if (userRole.canCreatePost) {
+                    ExpandableFloatingActionButton(
+                        items = listOf(
+                            FabSubItem(
+                                label = "Create Post",
+                                icon = Icons.Default.Edit,
+                                onClick = onCreatePostClick,
+                            )
+                        ),
+                        isExpanded = isFabExpanded,
+                        onExpandedChange = { isFabExpanded = it },
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                }
+            },
 
-    Scaffold(
-        floatingActionButton = {
-            if (userRole.canCreatePost) {
-                ExpandableFloatingActionButton(
-                    items = listOf(
-                        FabSubItem(
-                            label = "Create Post",
-                            icon = Icons.Default.Edit,
-                            onClick = onCreatePostClick,
-                        )
-                    ),
-                    isExpanded = isFabExpanded,
-                    onExpandedChange = { isFabExpanded = it },
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-            }
-        },
 
+            bottomBar = {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 8.dp
+                ) {
 
-        bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 8.dp
-            ) {
-
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onScheduleClick,
-                    icon = {
-                        Icon(
-                            Icons.Outlined.CalendarMonth,
-                            contentDescription = "Schedule"
-                        )
-                    }
-                )
-
-                NavigationBarItem(
-                    selected = true,
-                    onClick = { },
-                    icon = { Icon(Icons.Filled.Home, contentDescription = "Home") }
-                )
-                if (userRole.isCounselorOrAdmin) {
                     NavigationBarItem(
                         selected = false,
-                        onClick = onReportClick,
+                        onClick = onScheduleClick,
                         icon = {
                             Icon(
-                                Icons.Outlined.Report,
-                                contentDescription = "Reports"
+                                Icons.Outlined.CalendarMonth,
+                                contentDescription = "Schedule"
                             )
                         }
                     )
+
+                    NavigationBarItem(
+                        selected = true,
+                        onClick = { },
+                        icon = { Icon(Icons.Filled.Home, contentDescription = "Home") }
+                    )
+                    if (userRole.isCounselorOrAdmin) {
+                        NavigationBarItem(
+                            selected = false,
+                            onClick = onReportClick,
+                            icon = {
+                                Icon(
+                                    Icons.Outlined.Report,
+                                    contentDescription = "Reports"
+                                )
+                            }
+                        )
+                    }
+                    NavigationBarItem(
+                        selected = false,
+                        onClick = onSettingClick,
+                        icon = { Icon(Icons.Outlined.Settings, contentDescription = "Settings") }
+                    )
                 }
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onSettingClick,
-                    icon = { Icon(Icons.Outlined.Settings, contentDescription = "Settings") }
-                )
             }
-        }
-    )
-
-
-    { innerPadding ->
-        val scrimAlpha by animateFloatAsState(
-            targetValue = if (isFabExpanded) 0.6f else 0f,
-            animationSpec = tween(durationMillis = 300),
-            label = "ScrimAnimation"
         )
 
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .background(MaterialTheme.colorScheme.background)
-            ) {
-                Row(
+
+        { innerPadding ->
+            val scrimAlpha by animateFloatAsState(
+                targetValue = if (isFabExpanded) 0.6f else 0f,
+                animationSpec = tween(durationMillis = 300),
+                label = "ScrimAnimation"
+            )
+
+            Box(modifier = Modifier.fillMaxSize()) {
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .background(MaterialTheme.colorScheme.background)
                 ) {
-
-                    // Profile Avatar with Click Listener
-                    Box(
+                    Row(
                         modifier = Modifier
-                            .size(55.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary)
-                            .clickable {
-                                onProfileClick()
-                                android.util.Log.d("PROFILE_UI", "User avatar clicked")
-                            },
-                        contentAlignment = Alignment.Center
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Filled.Person,
-                            contentDescription = "User Avatar",
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
 
-                    TextField(
-                        value = searchText,
-                        onValueChange = { searchText = it },
-                        placeholder = { Text("Search", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                        leadingIcon = {
+                        // Profile Avatar with Click Listener
+                        Box(
+                            modifier = Modifier
+                                .size(55.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary)
+                                .clickable {
+                                    onProfileClick()
+                                    android.util.Log.d("PROFILE_UI", "User avatar clicked")
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
                             Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = "Search",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                imageVector = Icons.Filled.Person,
+                                contentDescription = "User Avatar",
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(20.dp)
                             )
-                        },
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
 
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(
-                            imeAction = ImeAction.Search
+                        TextField(
+                            value = searchText,
+                            onValueChange = { searchText = it },
+                            placeholder = {
+                                Text(
+                                    "Search",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = "Search",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
 
-                        ),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                imeAction = ImeAction.Search
 
-                        keyboardActions = KeyboardActions(
-                            onSearch = {
-                                scope.launch {
-                                    keyboardController?.hide()
+                            ),
+
+                            keyboardActions = KeyboardActions(
+                                onSearch = {
+                                    scope.launch {
+                                        keyboardController?.hide()
+                                    }
                                 }
-                            }
-                        ),
+                            ),
 
-                        colors = TextFieldDefaults.colors(
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(52.dp)
-                    )
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    FloatingActionButton(
-                        onClick = onNotificationsClick,
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        contentColor = MaterialTheme.colorScheme.primary,
-                        shape = CircleShape,
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = "Notifications"
+                            colors = TextFieldDefaults.colors(
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(52.dp)
                         )
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        FloatingActionButton(
+                            onClick = onNotificationsClick,
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            contentColor = MaterialTheme.colorScheme.primary,
+                            shape = CircleShape,
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = "Notifications"
+                            )
+                        }
                     }
-                }
-                PullToRefreshBox(
-                    isRefreshing = isRefreshing,
-                    onRefresh = onRefresh,
-                    modifier = Modifier.weight(1f)
-                ) {
-
-                    val listAlpha by animateFloatAsState(
-                        targetValue = if (isRefreshing) 0.3f else 1.0f,
-                        animationSpec = tween(durationMillis = 400),
-                        label = "ListFadeAnimation"
-                    )
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize()
-                            .graphicsLayer { alpha = listAlpha },
-                        contentPadding = PaddingValues(
-                            start = 16.dp,
-                            end = 16.dp,
-                            bottom = 12.dp
-                        )
+                    PullToRefreshBox(
+                        isRefreshing = isRefreshing,
+                        onRefresh = onRefresh,
+                        modifier = Modifier.weight(1f)
                     ) {
-                        // Top Tab Navigation
-                        item {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceAround
-                            ) {
-                                val tabs = listOf("Notice", "For you", "Favorites")
-                                tabs.forEachIndexed { index, title ->
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        TextButton(onClick = { selectedTab = index }) {
-                                            Text(
-                                                text = title,
-                                                fontSize = 16.sp,
-                                                fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
-                                                color = if (selectedTab == index) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
+
+                        val listAlpha by animateFloatAsState(
+                            targetValue = if (isRefreshing) 0.3f else 1.0f,
+                            animationSpec = tween(durationMillis = 400),
+                            label = "ListFadeAnimation"
+                        )
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize()
+                                .graphicsLayer { alpha = listAlpha },
+                            contentPadding = PaddingValues(
+                                start = 16.dp,
+                                end = 16.dp,
+                                bottom = 12.dp
+                            )
+                        ) {
+                            // Top Tab Navigation
+                            item {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceAround
+                                ) {
+                                    val tabs = listOf("Notice", "For you", "Favorites")
+                                    tabs.forEachIndexed { index, title ->
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            TextButton(onClick = { selectedTab = index }) {
+                                                Text(
+                                                    text = title,
+                                                    fontSize = 16.sp,
+                                                    fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
+                                                    color = if (selectedTab == index) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                            if (selectedTab == index) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .width(28.dp)
+                                                        .height(3.dp)
+                                                        .background(
+                                                            MaterialTheme.colorScheme.primary,
+                                                            shape = RoundedCornerShape(2.dp)
+                                                        )
+                                                )
+                                            }
                                         }
-                                        if (selectedTab == index) {
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
+
+
+                            when (selectedTab) {
+                                0 -> { // Announcements Tab
+                                    val notice = searchedPosts.filter {
+                                        it.category.equals("Notice", ignoreCase = true)
+                                    }
+                                    if (notice.isEmpty()) {
+                                        item {
                                             Box(
                                                 modifier = Modifier
-                                                    .width(28.dp)
-                                                    .height(3.dp)
-                                                    .background(
-                                                        MaterialTheme.colorScheme.primary,
-                                                        shape = RoundedCornerShape(2.dp)
-                                                    )
+                                                    .fillMaxWidth()
+                                                    .padding(top = 40.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    "No Notice yet.",
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        items(items = notice, key = { it.postId }) { post ->
+                                            val isLiked = post.likedBy.contains(currentUserId)
+                                            PostItemView(
+                                                post = post,
+                                                isLiked = isLiked,
+                                                onLikeClick = { onLikeClick(post.postId) }
                                             )
+                                            Spacer(modifier = Modifier.height(10.dp))
                                         }
                                     }
                                 }
-                            }
-                            Spacer(modifier = Modifier.height(16.dp))
-                        }
 
-
-                        when (selectedTab) {
-                            0 -> { // Announcements Tab
-                                val notice = searchedPosts.filter {
-                                    it.category.equals("Notice", ignoreCase = true)
-                                }
-                                if (notice.isEmpty()) {
-                                    item {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(top = 40.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text("No Notice yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                1 -> { // For You Tab
+                                    if (searchedPosts.isEmpty()) {
+                                        item {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = 40.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    "No general posts yet.",
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        items(
+                                            items = searchedPosts,
+                                            key = { it.postId }) { post ->
+                                            val isLiked = post.likedBy.contains(currentUserId)
+                                            PostItemView(
+                                                post = post,
+                                                isLiked = isLiked,
+                                                onLikeClick = { onLikeClick(post.postId) }
+                                            )
+                                            Spacer(modifier = Modifier.height(10.dp))
                                         }
                                     }
-                                } else {
-                                    items(items = notice, key = { it.postId }) { post ->
-                                        val isLiked = post.likedBy.contains(currentUserId)
-                                        PostItemView(
-                                            post = post,
-                                            isLiked = isLiked,
-                                            onLikeClick = { onLikeClick(post.postId) }
-                                        )
-                                        Spacer(modifier = Modifier.height(10.dp))
-                                    }
                                 }
-                            }
 
-                            1 -> { // For You Tab
-                                if (searchedPosts.isEmpty()) {
-                                    item {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(top = 40.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text("No general posts yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                2 -> { // Favorites Tab
+                                    val favorites = searchedPosts.filter {
+                                        it.likedBy.contains(currentUserId)
+                                    }
+                                    if (favorites.isEmpty()) {
+                                        item {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = 40.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    "No favorites yet.",
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
                                         }
-                                    }
-                                } else {
-                                    items(
-                                        items = searchedPosts,
-                                        key = { it.postId }) { post ->
-                                        val isLiked = post.likedBy.contains(currentUserId)
-                                        PostItemView(
-                                            post = post,
-                                            isLiked = isLiked,
-                                            onLikeClick = { onLikeClick(post.postId) }
-                                        )
-                                        Spacer(modifier = Modifier.height(10.dp))
-                                    }
-                                }
-                            }
-
-                            2 -> { // Favorites Tab
-                                val favorites = searchedPosts.filter {
-                                    it.likedBy.contains(currentUserId)
-                                }
-                                if (favorites.isEmpty()) {
-                                    item {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(top = 40.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text("No favorites yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    } else {
+                                        items(items = favorites, key = { it.postId }) { post ->
+                                            PostItemView(
+                                                post = post,
+                                                isLiked = true,
+                                                onLikeClick = { onLikeClick(post.postId) }
+                                            )
+                                            Spacer(modifier = Modifier.height(10.dp))
                                         }
-                                    }
-                                } else {
-                                    items(items = favorites, key = { it.postId }) { post ->
-                                        PostItemView(
-                                            post = post,
-                                            isLiked = true,
-                                            onLikeClick = { onLikeClick(post.postId) }
-                                        )
-                                        Spacer(modifier = Modifier.height(10.dp))
                                     }
                                 }
                             }
@@ -462,20 +474,19 @@ fun HomeScreenContent(
                     }
                 }
             }
-        }
 
-        if (scrimAlpha > 0f) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { alpha = scrimAlpha }
-                    .background(Color.Black.copy(alpha = 0.4f))
-                    .clickable { isFabExpanded = false }
-            )
+            if (scrimAlpha > 0f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { alpha = scrimAlpha }
+                        .background(Color.Black.copy(alpha = 0.4f))
+                        .clickable { isFabExpanded = false }
+                )
+            }
         }
     }
 }
-
 @Composable
 fun PostItemView(
     post: Post,

@@ -162,6 +162,9 @@ fun ScheduleScreen(
 
     val categories = listOf("All", "Appointment", "Seminar", "Other")
 
+
+
+
     // Filter items based on selected Date and Filter Category
     val filteredSchedules = remember(scheduleList, selectedDate, selectedFilterTab) {
         scheduleList.filter { item ->
@@ -178,6 +181,8 @@ fun ScheduleScreen(
         }
     }
 
+
+    if (userRole != UserRole.UNKNOWN && userRole.canCreatePost) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -347,6 +352,7 @@ fun ScheduleScreen(
             )
         }
     }
+}
 }
 
 @Composable
