@@ -159,7 +159,6 @@ fun HomeScreenContent(
         }
     }
 
-    if (userRole != UserRole.UNKNOWN && userRole.canCreatePost) {
         Scaffold(
             floatingActionButton = {
                 if (userRole.canCreatePost) {
@@ -485,7 +484,7 @@ fun HomeScreenContent(
                 )
             }
         }
-    }
+
 }
 @Composable
 fun PostItemView(

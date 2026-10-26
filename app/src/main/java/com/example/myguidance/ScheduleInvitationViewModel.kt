@@ -136,6 +136,7 @@ class ScheduleInvitation : ViewModel() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScheduleInvitationDesignScreen(
+    schedules: Schedules,
     scheduleViewModel: ScheduleInvitation = viewModel(),
     onBackClick: () -> Unit = {}
 ) {
@@ -146,7 +147,10 @@ fun ScheduleInvitationDesignScreen(
     val schedulesList by scheduleViewModel.schedules.collectAsState()
     val isViewModelRefreshing by scheduleViewModel.isRefreshing.collectAsState()
 
-    val pending = schedulesList.filter { it.status.equals("Pending", ignoreCase = true) }
+    val pending = schedulesList.filter {
+        it.status.equals("Pending", ignoreCase = true)
+        it.reportId.equals(, ignoreCase = true)
+    }
     val history = schedulesList.filter { !it.status.equals("Pending", ignoreCase = true) }
     val shown = if (selectedTab == 0) pending else history
 

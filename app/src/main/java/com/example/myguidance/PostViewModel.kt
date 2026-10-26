@@ -106,10 +106,10 @@ class PostViewModel : ViewModel() {
                 _isRefreshing.value = false
                 if (error != null || snapshot == null) return@addSnapshotListener
 
-                val now = System.currentTimeMillis()
+
                 _postsList.value = snapshot.documents
                     .mapNotNull { it.toObject(Post::class.java) }
-                    .filter { it.expiresAt > now }
+
             }
     }
 

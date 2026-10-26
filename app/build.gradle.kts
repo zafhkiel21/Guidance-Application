@@ -1,4 +1,5 @@
-import org.gradle.language.nativeplatform.internal.Dimensions.applicationVariants
+import java.util.Properties
+import java.io.FileInputStream
 
 plugins {
     alias(libs.plugins.android.application)
@@ -6,11 +7,16 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        load(FileInputStream(localPropertiesFile))
+    }
+}
+
 android {
     namespace = "com.example.myguidance"
-    compileSdk {
-        version = release(37)
-    }
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.example.myguidance"
@@ -20,26 +26,34 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+
+        buildConfigField("String", "EMAILJS_SERVICE_ID", "\"${localProperties.getProperty("EMAILJS_SERVICE_ID") ?: ""}\"")
+        buildConfigField("String", "EMAILJS_TEMPLATE_ID", "\"${localProperties.getProperty("EMAILJS_TEMPLATE_ID") ?: ""}\"")
+        buildConfigField("String", "EMAILJS_PUBLIC_KEY", "\"${localProperties.getProperty("EMAILJS_PUBLIC_KEY") ?: ""}\"")
     }
 
     buildTypes {
         release {
-            optimization {
-                enable = false
-            }
+            isMinifyEnabled = false
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
 dependencies {
-    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.2.0")
+    implementation(libs.okhttp)
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.swiperefreshlayout)
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.navigation.compose)
