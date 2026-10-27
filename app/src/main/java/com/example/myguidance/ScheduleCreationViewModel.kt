@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.Calendar
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 
 data class Schedules(
     val reportId: String = "",
@@ -23,6 +25,7 @@ data class Schedules(
     val time: String = "",
     val purpose: String = "",
     val selectablePeopleList: List<Map<String, String>> = emptyList(),
+    val selectablePeople: List<Map<String, String>> = emptyList(),
     val timestamp: Long = System.currentTimeMillis(),
     val startTimeMillis: Long = 0L,
     val endTimeInMillis: Long = 0L,
@@ -102,6 +105,56 @@ class ScheduleCreation : ViewModel() {
         )
     }
 
+    fun emailInvitedStudents(
+        people: List<Map<String, String>>,
+        title: String,
+        date: String,
+        time: String,
+        purpose: String,
+        fromName: String
+    ) {
+        android.util.Log.d("EMAIL_DEBUG", "called with ${people.size} people: $people")
+        people.forEach { person ->
+            val id = person["idNumber"]?.trim()
+            if (id.isNullOrBlank()) {
+                android.util.Log.e("EMAIL_DEBUG", "no idNumber in $person")
+                return@forEach
+            }
+            db.collection("users").whereEqualTo("idNumber", id).get()
+                .addOnSuccessListener { snap ->
+                    android.util.Log.d("EMAIL_DEBUG", "lookup '$id' found ${snap.size()} users")
+                    val doc = snap.documents.firstOrNull() ?: return@addOnSuccessListener
+                    val email = doc.getString("email")
+                    if (email.isNullOrBlank()) {
+                        android.util.Log.e("EMAIL_DEBUG", "user $id has no email")
+                        return@addOnSuccessListener
+                    }
+                    val name = doc.getString("name") ?: "Student"
+
+                    val message = """
+                        Hi $name,
+
+                        You have been invited to a guidance session by $fromName.
+
+                        Session: ${title.ifBlank { "Guidance Session" }}
+                        Date: $date
+                        Time: $time
+                        Purpose: $purpose
+
+                        Please open the app to accept or decline.
+                    """.trimIndent()
+
+                    viewModelScope.launch {
+                        val ok = EmailService.sendNotificationEmail(email, message)
+                        android.util.Log.d("EMAIL_DEBUG", "send to $email result=$ok")
+                    }
+                }
+                .addOnFailureListener {
+                    android.util.Log.e("EMAIL_DEBUG", "lookup failed: ${it.message}")
+                }
+        }
+    }
+
     fun fetchSchedules() {
         val currentTime = System.currentTimeMillis()
         db.collection("schedules")
@@ -150,7 +203,7 @@ class ScheduleCreation : ViewModel() {
             "date" to date,
             "time" to time,
             "purpose" to purpose,
-            "selectablePeople" to selectedPeople,
+            "selectablePeopleList" to selectedPeople,
             "timestamp" to currentTime,
             "startTimeMillis" to startTimeMillis,
             "endTimeInMillis" to endTimeInMillis,
@@ -180,9 +233,8 @@ class ScheduleCreation : ViewModel() {
     ) {
         if (reportId.isBlank()) return
 
-        // Reference the specific document in your "reports" (or "posts") collection
         db.collection("reports").document(reportId)
-            .update("status", "Pending") // Updates only the "status" field
+            .update("status", "Pending")
             .addOnSuccessListener {
                 onSuccess()
             }
@@ -198,9 +250,9 @@ class ScheduleCreation : ViewModel() {
     ) {
         if (reportId.isBlank()) return
 
-        // Reference the specific document in your "reports" (or "posts") collection
+
         db.collection("reports").document(reportId)
-            .update("status", "Resolved") // Updates only the "status" field
+            .update("status", "Resolved")
             .addOnSuccessListener {
                 onSuccess()
             }
@@ -210,5 +262,7 @@ class ScheduleCreation : ViewModel() {
     }
 
 }
+
+
 
 

@@ -149,11 +149,15 @@ fun ScheduleScreen(
     onSettingClick: () -> Unit = {},
     onReportClick: () -> Unit = {}
 ) {
+
+
+
     var isFabExpanded by remember { mutableStateOf(false) }
     val isViewModelRefreshing by scheduleViewModel.isRefreshing.collectAsState()
     var isRefreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
+    val userIdNumber by authViewModel.userIdNumber.collectAsState()
     val userRole by authViewModel.userRole.collectAsState()
     val scheduleList by scheduleViewModel.schedules.collectAsState()
 
@@ -165,9 +169,15 @@ fun ScheduleScreen(
 
 
 
-    // Filter items based on selected Date and Filter Category
-    val filteredSchedules = remember(scheduleList, selectedDate, selectedFilterTab) {
+    val filteredSchedules = remember(scheduleList, selectedDate, selectedFilterTab, userIdNumber, userRole) {
         scheduleList.filter { item ->
+            // 1. If it's still loading the user ID, don't show student-specific items yet (or allow if admin)
+            val isAllowed = when {
+                userRole.isCounselorOrAdmin -> true
+                userIdNumber.isBlank() -> false // Prevents flashing/hiding everything before ID loads
+                else -> item.isFor(userIdNumber)
+            }
+
             val itemDate = parseDateToLocalDate(item.date)
             val dateMatches = itemDate == selectedDate
             val categoryMatches = when (selectedFilterTab) {
@@ -177,7 +187,7 @@ fun ScheduleScreen(
                     item.category.equals(selectedCategoryName, ignoreCase = true)
                 }
             }
-            dateMatches && categoryMatches
+            isAllowed && dateMatches && categoryMatches
         }
     }
 

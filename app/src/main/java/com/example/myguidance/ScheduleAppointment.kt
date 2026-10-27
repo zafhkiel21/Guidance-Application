@@ -363,6 +363,13 @@ fun ScheduleAppointmentDesign(
                                 endMinute = endMinute,
                                 onError = { errorMessage = it },
                                 onSuccess = {
+
+                                    scheduleViewModel.emailInvitedStudents(
+                                        people = checkedPeople,
+                                        title = titleText, date = formattedDate, time = timeRange, purpose = fullPurpose,
+                                        fromName = profile.name
+                                    )
+
                                     scheduleViewModel.markReportAsScheduled(reportId)
                                     onConfirmClick()
                                 },
@@ -425,6 +432,7 @@ private fun endsInThePast(dateMillis: Long, endHour: Int, endMinute: Int): Boole
     }
     return end.timeInMillis <= System.currentTimeMillis()
 }
+
 
 
 

@@ -219,6 +219,7 @@ fun AppNavigation(
 
         composable (Screen.Invitation.route){
             ScheduleInvitationDesignScreen(
+                authViewModel = authViewModel,
                 onBackClick = {navController.popBackStack()},
 
             )

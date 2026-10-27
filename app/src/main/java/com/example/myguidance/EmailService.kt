@@ -21,6 +21,8 @@ object EmailService {
     ): Boolean = withContext(Dispatchers.IO) {
         val url = "https://api.emailjs.com/api/v1.0/email/send"
 
+        Log.d("EmailJS", "svc='${BuildConfig.EMAILJS_SERVICE_ID}' tpl='${BuildConfig.EMAILJS_TEMPLATE_ID}' keyLen=${BuildConfig.EMAILJS_PUBLIC_KEY.length}")
+
         // Build parameters to match your EmailJS dynamic variables
         val templateParams = JSONObject().apply {
             put("to_email", recipientEmail)

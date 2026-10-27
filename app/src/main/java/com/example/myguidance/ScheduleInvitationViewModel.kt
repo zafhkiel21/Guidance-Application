@@ -33,6 +33,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SecondaryTabRow
@@ -40,7 +41,6 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -56,7 +56,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
@@ -136,10 +135,13 @@ class ScheduleInvitation : ViewModel() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScheduleInvitationDesignScreen(
-    schedules: Schedules,
+    authViewModel: AuthViewModel,
     scheduleViewModel: ScheduleInvitation = viewModel(),
     onBackClick: () -> Unit = {}
 ) {
+
+    val userIdNumber by authViewModel.userIdNumber.collectAsState()
+
     var selectedTab by remember { mutableIntStateOf(0) }
     var isRefreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -147,11 +149,10 @@ fun ScheduleInvitationDesignScreen(
     val schedulesList by scheduleViewModel.schedules.collectAsState()
     val isViewModelRefreshing by scheduleViewModel.isRefreshing.collectAsState()
 
-    val pending = schedulesList.filter {
-        it.status.equals("Pending", ignoreCase = true)
-        it.reportId.equals(, ignoreCase = true)
-    }
-    val history = schedulesList.filter { !it.status.equals("Pending", ignoreCase = true) }
+    val mine = schedulesList.filter { it.isFor(userIdNumber) }
+    android.util.Log.d("INVITE_DEBUG", "myId='$userIdNumber' total=${schedulesList.size} mine=${mine.size} ids=${schedulesList.map { s -> s.selectablePeopleList.map { it["idNumber"] } }}")
+    val pending = mine.filter { it.status.trim().equals("Pending", ignoreCase = true) }
+    val history = mine.filter { !it.status.trim().equals("Pending", ignoreCase = true) }
     val shown = if (selectedTab == 0) pending else history
 
     Scaffold(
@@ -213,9 +214,6 @@ fun ScheduleInvitationDesignScreen(
                         .graphicsLayer(alpha = listAlpha)
                 ) {
                     if (shown.isEmpty()) {
-                        EmptyInvitesState(
-                            message = if (selectedTab == 0) "You're all caught up." else "No past invitations."
-                        )
                         LazyColumn(modifier = Modifier.fillMaxSize()) {
                             item {
                                 Box(modifier = Modifier.fillParentMaxSize()) {
@@ -436,8 +434,9 @@ private fun InviteDesignCard(
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-private fun ScheduleInvitationDesignPreview() {
-    ScheduleInvitationDesignScreen()
+fun Schedules.isFor(idNumber: String): Boolean {
+    return idNumber.isNotBlank() && (selectablePeopleList + selectablePeople).any { personMap ->
+        val personId = personMap["idNumber"]?.trim() ?: ""
+        personId.equals(idNumber.trim(), ignoreCase = true)
+    }
 }
