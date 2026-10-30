@@ -243,7 +243,6 @@ fun HomeScreenContent(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
 
-                        // Profile Avatar with Click Listener
                         Box(
                             modifier = Modifier
                                 .size(55.dp)
@@ -342,7 +341,7 @@ fun HomeScreenContent(
                                 bottom = 12.dp
                             )
                         ) {
-                            // Top Tab Navigation
+
                             item {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -499,7 +498,7 @@ fun PostItemView(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            // Author Info Header
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -531,7 +530,7 @@ fun PostItemView(
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Text Content
+
             if (post.textContent.isNotBlank()) {
                 Text(
                     text = post.textContent,
@@ -541,7 +540,7 @@ fun PostItemView(
                 Spacer(modifier = Modifier.height(10.dp))
             }
 
-            // Attached Image Preview
+
             post.mediaUrl?.let { url ->
                 if (url.isNotBlank()) {
                     AsyncImage(
@@ -558,7 +557,6 @@ fun PostItemView(
             }
 
 
-            // Like & Comment Action Buttons
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onLikeClick, modifier = Modifier.size(28.dp)) {
                     Icon(

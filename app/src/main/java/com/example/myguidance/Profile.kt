@@ -139,7 +139,7 @@ fun ProfileScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // User Name
+
                 Text(
                     text = profile.name.ifBlank { "User Name" },
                     fontSize = 20.sp,

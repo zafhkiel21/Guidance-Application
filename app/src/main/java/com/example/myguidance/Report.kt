@@ -128,7 +128,8 @@ fun ReportsScreen(
     onScheduleClick: () -> Unit = {},
     onHomeClick: () -> Unit = {},
     onReportClick: () -> Unit = {},
-    onSettingClick: () -> Unit = {}
+    onSettingClick: () -> Unit = {},
+    initialReportId: String? = null
 ) {
 
     var searchText by remember { mutableStateOf("") }
@@ -184,6 +185,16 @@ fun ReportsScreen(
 
     val users by postViewModel.usersList.collectAsState()
     var selectedReport by remember { mutableStateOf<Report?>(null) }
+    var openedInitial by remember { mutableStateOf(false) }
+
+    LaunchedEffect(initialReportId, reportsList) {
+        if (initialReportId != null && !openedInitial) {
+            reportsList.find { it.reportId == initialReportId }?.let {
+                selectedReport = it
+                openedInitial = true
+            }
+        }
+    }
 
     val filteredUsers = remember(users, searchText) {
         users.filter {
@@ -1133,8 +1144,6 @@ fun ViewToggle(
 
 fun formatTimestamp(timestamp: Long): String {
     val now = System.currentTimeMillis()
-
-    // Returns "Just now", "5 minutes ago", "2 hours ago", etc.
     return DateUtils.getRelativeTimeSpanString(
         timestamp,
         now,
@@ -1150,3 +1159,4 @@ fun formatTimes(timestamp: Long): String {
     val sdf = SimpleDateFormat("MMM dd, yyyy • hh:mm a", Locale.getDefault())
     return sdf.format(Date(timestamp))
 }
+

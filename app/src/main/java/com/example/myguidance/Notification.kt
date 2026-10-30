@@ -1,6 +1,5 @@
 package com.example.myguidance
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -33,13 +32,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -51,16 +51,30 @@ data class NotificationItem(
     val title: String,
     val message: String,
     val timeAgo: String,
-    val isRead: Boolean = false
+    val isRead: Boolean = false,
+    val reportId: String = "",
+    val status: String = ""
 )
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationScreen(
-    notifications: List<NotificationItem> = sampleNotifications,
+    postViewModel: PostViewModel,
+    authViewModel: AuthViewModel,
     onBackClick: () -> Unit = {},
     onNotificationClick: (NotificationItem) -> Unit = {},
 ) {
+    val userRole by authViewModel.userRole.collectAsState()
+    val currentUser by authViewModel.currentUser.collectAsState()
+    val reports by postViewModel.reportsList.collectAsState()
+    val notifications by postViewModel.notifications.collectAsState()
+    val uid = currentUser?.uid
+
+    LaunchedEffect(uid, reports) {
+        if (uid != null) postViewModel.loadNotifications(uid)
+    }
 
     Scaffold(
         topBar = {
@@ -123,7 +137,10 @@ fun NotificationScreen(
                 items(notifications, key = { it.id }) { item ->
                     NotificationCard(
                         notification = item,
-                        onClick = { onNotificationClick(item) }
+                        onClick = { postViewModel.markAsSeen(item)
+                            onNotificationClick(item)
+
+                        }
                     )
                 }
             }
@@ -136,6 +153,8 @@ private fun NotificationCard(
     notification: NotificationItem,
     onClick: () -> Unit
 ) {
+
+
     Card(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
@@ -196,41 +215,5 @@ private fun NotificationCard(
                 )
             }
         }
-    }
-}
-
-private val sampleNotifications = listOf(
-    NotificationItem(
-        id = "1",
-        title = "New Announcement",
-        message = "Midterm examination schedules have been published. Please check your student portal.",
-        timeAgo = "2m ago",
-        isRead = false
-    ),
-    NotificationItem(
-        id = "2",
-        title = "Assignment Reminder",
-        message = "Mobile App Development project submission deadline is tomorrow at 11:59 PM.",
-        timeAgo = "1h ago",
-        isRead = false
-    ),
-    NotificationItem(
-        id = "3",
-        title = "Profile Updated",
-        message = "Your course and section details were successfully updated by the admin.",
-        timeAgo = "1d ago",
-        isRead = true
-    )
-)
-
-// Preview
-@SuppressLint("ViewModelConstructorInComposable")
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun NotificationScreenPreview() {
-    MaterialTheme {
-        NotificationScreen(
-            notifications = sampleNotifications
-        )
     }
 }

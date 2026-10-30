@@ -1,12 +1,13 @@
 package com.example.myguidance
 
-import com.google.firebase.firestore.DocumentId
 import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.DocumentId
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
@@ -14,7 +15,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.Calendar
-import kotlin.collections.emptyList
 
 private const val POST_LIFETIME_MS = 7L * 24 * 60 * 60 * 1000 // 7 days
 
@@ -94,9 +94,6 @@ class PostViewModel : ViewModel() {
         super.onCleared()
     }
 
-    // ---------------------------------------------------------------------
-    // Reading
-    // ---------------------------------------------------------------------
 
     fun fetchPosts() {
         postsListener?.remove()
@@ -125,32 +122,21 @@ class PostViewModel : ViewModel() {
             }
     }
 
-    /** The spinner is switched off by the posts listener once its first snapshot arrives. */
-    fun refreshPosts() {
-        _isRefreshing.value = true
-        fetchPosts()
-        fetchReports()
-    }
 
 
-    data class UserRecord(
-        val uid: String?,
-        val profile: Map<String, Any>?,
-        val involved: List<Report>?,
-        val submitted: List<Report>?
-    )
 
     data class PersonRecord(
-        val uid: String?,                    // users document id, null if no account matched
-        val profile: Map<String, Any>?,      // the user's document fields
-        val involvedIn: List<Report>,        // reports that list this ID under People Involved
-        val submitted: List<Report>          // reports this person filed
+        val uid: String?,
+        val profile: Map<String, Any>?,
+        val involvedIn: List<Report>,
+        val submitted: List<Report>
     )
 
     fun loadPersonRecord(idNumber: String, onResult: (PersonRecord) -> Unit) {
         val id = idNumber.trim()
         val empty = PersonRecord(null, null, emptyList(), emptyList())
         if (id.isEmpty()) { onResult(empty); return }
+
 
         db.collection("users")
             .whereEqualTo("idNumber", id)
@@ -205,9 +191,6 @@ class PostViewModel : ViewModel() {
             }
     }
 
-    // ---------------------------------------------------------------------
-    // Likes
-    // ---------------------------------------------------------------------
 
     fun toggleLike(postId: String) {
         val userId = auth.currentUser?.uid ?: return
@@ -231,9 +214,6 @@ class PostViewModel : ViewModel() {
         }
     }
 
-    // ---------------------------------------------------------------------
-    // Creating reports and posts
-    // ---------------------------------------------------------------------
 
     fun createReport(
         location: String,
@@ -349,14 +329,7 @@ class PostViewModel : ViewModel() {
         }
     }
 
-    // ---------------------------------------------------------------------
-    // Helpers
-    // ---------------------------------------------------------------------
 
-    /**
-     * Shared flow for reports and posts: optionally upload the media first, then
-     * write the document. Keeps [isUploading] accurate on every success/failure path.
-     */
     private fun submitDocument(
         collection: String,
         context: Context,
@@ -428,4 +401,73 @@ class PostViewModel : ViewModel() {
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }.timeInMillis
+
+
+    private val _notifications = MutableStateFlow<List<NotificationItem>>(emptyList())
+    val notifications = _notifications.asStateFlow()
+
+    private var currentUid: String? = null
+
+    fun loadNotifications(
+        uid: String
+
+    ) {
+        currentUid = uid
+
+        db.collection("users").document(uid).get().addOnSuccessListener { doc ->
+            val idNumber = doc.getString("idNumber").orEmpty()
+            val seen = (doc.get("seenNotifIds") as? List<*>)
+                ?.filterIsInstance<String>()?.toSet() ?: emptySet()
+
+            loadPersonRecord(idNumber) { record ->
+                val items = buildList {
+                    record.involvedIn.forEach { r ->
+                        val nid = "involved_${r.reportId}_${r.status}"
+                        add(NotificationItem(
+                            id = nid,
+                            title = "Report resolved",
+                            message = "You were involved in \"${r.title}\", which is now ${r.status}.",
+                            timeAgo = relativeTime(r.timestamp),
+                            isRead = nid in seen
+                        ))
+                    }
+
+
+                    record.submitted.forEach { r ->
+                        val nid = "submitted_${r.reportId}_${r.status}"
+                        add(NotificationItem(
+                            id = nid,
+                            title = "Report update",
+                            message = "Your report \"${r.title}\" is now ${r.status}.",
+                            timeAgo = relativeTime(r.timestamp),
+                            isRead = nid in seen ,
+                            reportId = r.reportId,
+                            status = r.status
+                        ))
+                    }
+                }.sortedBy { it.isRead }
+
+                _notifications.value = items
+            }
+        }
+    }
+
+    fun markAsSeen(item: NotificationItem) {
+        if (item.isRead) return
+        // update the UI immediately
+        _notifications.value = _notifications.value.map {
+            if (it.id == item.id) it.copy(isRead = true) else it
+        }
+        // persist it
+        currentUid?.let { uid ->
+            db.collection("users").document(uid)
+                .update("seenNotifIds", FieldValue.arrayUnion(item.id))
+        }
+    }
+
+    private fun relativeTime(millis: Long): String =
+        android.text.format.DateUtils.getRelativeTimeSpanString(
+            millis, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS
+        ).toString()
 }
+

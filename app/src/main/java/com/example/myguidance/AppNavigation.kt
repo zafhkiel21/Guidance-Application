@@ -36,6 +36,9 @@ sealed class Screen(val route: String) {
     object Setting : Screen("setting")
     object EditAccount : Screen("edit_account")
     object Report : Screen("Report")
+    object ReportDetail : Screen("Report/{reportId}") {
+        fun createRoute(reportId: String) = "Report/$reportId"
+    }
 }
 
 @Composable
@@ -48,13 +51,25 @@ fun AppNavigation(
     val currentUser by authViewModel.currentUser.collectAsState()
     val startDestination = if (currentUser != null) Screen.Home.route else Screen.Login.route
 
-    fun navigateTo(route: String){
-        navController.navigate(route){
-            popUpTo(Screen.Home.route) {saveState = true}
+    fun goHome() {
+        if (!navController.popBackStack(Screen.Home.route, inclusive = false)) {
+            navController.navigate(Screen.Home.route) { launchSingleTop = true }
+        }
+    }
+
+    fun navigateTo(route: String) {
+        if (route == Screen.Home.route) {
+            goHome()
+            return
+        }
+        navController.navigate(route) {
+            popUpTo(Screen.Home.route) { saveState = true }
             launchSingleTop = true
             restoreState = true
         }
     }
+
+
 
 
     NavHost(
@@ -131,8 +146,19 @@ fun AppNavigation(
         }
 
         composable(Screen.Notifications.route){
+            val userRole by authViewModel.userRole.collectAsState()
         NotificationScreen(
+            authViewModel = authViewModel,
+            postViewModel = postViewModel,
             onBackClick = {navController.popBackStack()},
+            onNotificationClick = { item ->
+                when {
+                    item.status.equals("Scheduled", true) -> navigateTo(Screen.Schedule.route)
+
+                    userRole.isCounselorOrAdmin && item.reportId.isNotBlank() ->
+                        navController.navigate(Screen.ReportDetail.createRoute(item.reportId))
+                }
+            }
 
         )
             }
@@ -180,6 +206,29 @@ fun AppNavigation(
             )
 
         }
+
+        composable(
+            route = Screen.ReportDetail.route,
+            arguments = listOf(navArgument("reportId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val reportId = backStackEntry.arguments?.getString("reportId")
+
+            ReportsScreen(
+                onScheduleClick = { navigateTo(Screen.Schedule.route) },
+                onScheduleAppointmentClick = { posterId, rId ->
+                    navController.navigate(
+                        Screen.ScheduleAppointment.createRoute(
+                            targetUserId = posterId, reportId = rId))},
+                onReportClick = { navigateTo(Screen.Report.route) },
+                onSettingClick = { navigateTo(Screen.Setting.route) },
+                onHomeClick = { navigateTo(Screen.Home.route) },
+                postViewModel = postViewModel,
+                authViewModel = authViewModel,
+                initialReportId = reportId
+            )
+        }
+
+
 
         composable(
             route = Screen.ScheduleAppointment.route,
@@ -231,3 +280,4 @@ fun AppNavigation(
 
 
 }
+

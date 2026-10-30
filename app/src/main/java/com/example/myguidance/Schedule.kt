@@ -85,7 +85,6 @@ import java.util.Date
 import java.util.Locale
 import kotlin.time.Duration.Companion.milliseconds
 
-// ViewModel for Realtime Firestore Schedule Data
 class ScheduleViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance("guidance")
     private val _schedules = MutableStateFlow<List<Schedules>>(emptyList())
@@ -103,10 +102,7 @@ class ScheduleViewModel : ViewModel() {
     private fun fetchRealSchedules() {
         val currentTime = System.currentTimeMillis()
 
-        // 1. Remove previous listener if active
         scheduleListener?.remove()
-
-        // 2. Fetch schedules and filter out expired items client-side
         scheduleListener = db.collection("schedules")
             .addSnapshotListener { snapshot, error ->
                 _isRefreshing.value = false
@@ -171,10 +167,10 @@ fun ScheduleScreen(
 
     val filteredSchedules = remember(scheduleList, selectedDate, selectedFilterTab, userIdNumber, userRole) {
         scheduleList.filter { item ->
-            // 1. If it's still loading the user ID, don't show student-specific items yet (or allow if admin)
+
             val isAllowed = when {
                 userRole.isCounselorOrAdmin -> true
-                userIdNumber.isBlank() -> false // Prevents flashing/hiding everything before ID loads
+                userIdNumber.isBlank() -> false
                 else -> item.isFor(userIdNumber)
             }
 
@@ -287,7 +283,6 @@ fun ScheduleScreen(
                     .background(MaterialTheme.colorScheme.background)
                     .graphicsLayer { alpha = listAlpha }
             ) {
-                // Horizontal Date Strip Calendar
                 DateStripHeader(
                     selectedDate = selectedDate,
                     schedules = scheduleList,
@@ -296,7 +291,6 @@ fun ScheduleScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Filter Chips Bar
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -314,7 +308,7 @@ fun ScheduleScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Schedule Items List
+
                 if (filteredSchedules.isEmpty()) {
                     Box(
                         modifier = Modifier
