@@ -17,6 +17,7 @@ import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -39,7 +40,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -87,6 +87,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
@@ -135,7 +136,7 @@ fun ReportsScreen(
     var searchText by remember { mutableStateOf("") }
     val keyboardController = LocalSoftwareKeyboardController.current
     var selectedCategory by remember { mutableIntStateOf(0) }
-    val categories = listOf("TBS", "Pending", "Scheduled", "Resolved")
+    val categories = listOf("TBS", "Pending", "Scheduled", "Resolved", "Dismissed")
     var currentView by remember { mutableStateOf(ReportsVIEW.REPORTS) }
 
 
@@ -170,6 +171,7 @@ fun ReportsScreen(
                 1 -> it.status.equals("Pending", ignoreCase = true)
                 2 -> it.status.equals("Scheduled", ignoreCase = true)
                 3 -> it.status.equals("Resolved", ignoreCase = true)
+                4 -> it.status.equals("Dismissed", ignoreCase = true)
                 else -> true
             }
             tabMatches && textMatches
@@ -210,7 +212,7 @@ fun ReportsScreen(
         topBar = {
             Column(modifier = Modifier.background(MaterialTheme.colorScheme.surface)) {
                 TopAppBar(
-                    title = { Text("Incident Reports", fontSize = 18.sp, fontWeight = FontWeight.Bold) },
+                    title = { Text("Cases / Statistics", fontSize = 18.sp, fontWeight = FontWeight.Bold) },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
                 )
                 ViewToggle(
@@ -413,6 +415,7 @@ fun ReportsScreen(
                                                         "pending" -> "No pending reports"
                                                         "scheduled" -> "No scheduled reports"
                                                         "resolved" -> "No resolved reports"
+                                                        "dismissed" -> "No Dismissed reports"
                                                         else -> "No reports"
                                                     },
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -430,6 +433,18 @@ fun ReportsScreen(
                                                 onResolvedClick = { reportId ->
                                                     viewModel.markReportAsResolved(reportId = reportId)
                                                 },
+
+                                                onReEvaluateClick = { reportId ->
+                                                    viewModel.markReportAsTBS(reportId = reportId)
+                                                },
+
+                                                onDismissClick = { reportId ->
+                                                    viewModel.markReportAsDismissed(reportId = reportId)
+                                                },
+
+                                                onDeleteClick = {reportId ->
+                                            viewModel.removeReport(reportId = reportId)
+                                        },
                                                 onScheduleAppointmentClick = { posterId, reportId ->
                                                     onScheduleAppointmentClick(
                                                         posterId,
@@ -487,7 +502,7 @@ fun ReportsScreen(
                                     contentPadding = PaddingValues(horizontal = 16.dp),
                                     verticalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    if (filteredUsers.isEmpty() || filteredReports.isEmpty()) {
+                                    if (filteredUsers.isEmpty()) {
                                         item {
                                             Column(
                                                 modifier = Modifier
@@ -498,18 +513,13 @@ fun ReportsScreen(
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Outlined.ReportProblem,
-                                                    contentDescription = "No reports",
+                                                    contentDescription = "No users",
                                                     modifier = Modifier.size(64.dp),
                                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
                                                 Spacer(modifier = Modifier.height(12.dp))
                                                 Text(
-                                                    text = when (categories[selectedCategory].lowercase()) {
-                                                        "pending" -> "No user found"
-                                                        "scheduled" -> "No user found"
-                                                        "resolved" -> "no use found"
-                                                        else -> "No reports"
-                                                    },
+                                                    text = "No users found",
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                     fontSize = 15.sp,
                                                     fontWeight = FontWeight.Medium
@@ -519,7 +529,7 @@ fun ReportsScreen(
                                     } else {
                                         items(
                                             items = filteredUsers,
-                                            key = { it.uid?: it.idNumber }) { user ->
+                                            key = { it.uid ?: it.idNumber }) { user ->
                                             UserCardItem(
                                                 user = user,
                                                 reports = reportsList,
@@ -554,6 +564,9 @@ fun ReportsScreen(
                 ReportCardItem(
                     report = report,
                     onResolvedClick = { id -> viewModel.markReportAsResolved(reportId = id) },
+                    onDismissClick = { id -> viewModel.markReportAsDismissed(reportId = id) },
+                    onReEvaluateClick = { id -> viewModel.markReportAsTBS(reportId = id) },
+                    onDeleteClick = { id -> viewModel.removeReport(reportId = id) },
                     onScheduleAppointmentClick = { posterId, reportId ->
                         selectedReport = null
                         onScheduleAppointmentClick(posterId, reportId)
@@ -572,18 +585,30 @@ fun ReportCardItem(
     report: Report,
     onScheduleAppointmentClick: (posterId: String, reportId: String) -> Unit = { _, _ -> },
     onResolvedClick: (String) -> Unit,
+    onDismissClick: (String) -> Unit,
+    onReEvaluateClick: (String) -> Unit,
+    onDeleteClick: (String) -> Unit
 ) {
 
-    var showResolveDialog by remember { mutableStateOf(false) }
+    var showAlertDialog by remember {mutableStateOf(false)}
+    var showDeleteDialog by remember {mutableStateOf(false)}
     var expanded by remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
 
+    val preset = StatusButtonPreset.fromStatus(report.status)
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val dismissContainer = if (isDark) Color(0xFFEF9A9A) else Color(0xFFD32F2F)
+    val dismissContent = if (isDark) Color(0xFF3B0A0A) else Color.White
+    val colors = preset?.colorsFor(isDark)
+        ?: StatusColors(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
+
 
     Card(
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
             .fillMaxWidth()
             .animateContentSize(animationSpec = tween(durationMillis = 300))
             .clickable(
@@ -597,20 +622,8 @@ fun ReportCardItem(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.ReportProblem,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+
+                UserAvatar(userId = report.authorId)
 
                 Spacer(modifier = Modifier.width(12.dp))
 
@@ -628,15 +641,19 @@ fun ReportCardItem(
                 }
                 Button(
                     onClick = {
-                        when (report.status) {
-                            "TBS" -> onScheduleAppointmentClick(report.authorId, report.reportId)
-                            "Scheduled" -> showResolveDialog = true
+                        when (preset){
+                            StatusButtonPreset.TBS -> onScheduleAppointmentClick(report.authorId, report.reportId)
+                            StatusButtonPreset.SCHEDULED -> showAlertDialog = true
+                            StatusButtonPreset.DISMISSED -> showAlertDialog = true
+                            else -> {}
                         }
                     },
-                    enabled = report.status == "TBS" || report.status == "Scheduled",
+                    enabled = preset?.clickable == true,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                        containerColor = colors.container,
+                        contentColor = colors.content,
+                        disabledContainerColor = colors.container,
+                        disabledContentColor = colors.content
                     ),
                     shape = RoundedCornerShape(8.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
@@ -648,6 +665,7 @@ fun ReportCardItem(
                             "Pending" -> "Pending"
                             "Scheduled" -> "Set as Resolved"
                             "Resolved" -> "Resolved"
+                            "Dismissed" -> "Re-evaluate"
                             else -> "Unknown"
                         },
                         fontSize = 11.sp,
@@ -655,16 +673,53 @@ fun ReportCardItem(
                     )
                 }
 
-                if (showResolveDialog) {
+                Spacer(modifier = Modifier.width(12.dp))
+
+                if(report.status == "TBS"
+                    || report.status == "Scheduled"){
+                    Button(
+                        onClick = { showAlertDialog = true },
+                        enabled = true,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = dismissContainer,
+                            contentColor = dismissContent,
+                            disabledContainerColor = dismissContainer,),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+                    ) {
+                        Text(text = "Dismiss", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+
+                if(report.status == "Dismissed"){
+                    Button(
+                        onClick = { showDeleteDialog = true },
+                        enabled = true,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = dismissContainer,
+                            contentColor = dismissContent,
+                            disabledContainerColor = dismissContainer,),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+                    ) {
+                        Text(text = "Delete", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+
+                if (showDeleteDialog) {
                     AlertDialog(
-                        onDismissRequest = { showResolveDialog = false },
-                        title = { Text("Confirm Resolution") },
-                        text = { Text("Are you sure you want to mark this report as resolved? This action cannot be undone.") },
+                        onDismissRequest = { showDeleteDialog = false },
+                        title = { Text("Delete Report") },
+                        text = { Text("Are you sure you want to Delete this report?") },
                         confirmButton = {
                             TextButton(
                                 onClick = {
-                                    showResolveDialog = false
-                                    onResolvedClick(report.reportId) // Trigger the actual action here
+                                    showDeleteDialog = false
+                                    onDeleteClick(report.reportId)
                                 }
                             ) {
                                 Text("Confirm")
@@ -672,7 +727,7 @@ fun ReportCardItem(
                         },
                         dismissButton = {
                             TextButton(
-                                onClick = { showResolveDialog = false }
+                                onClick = { showDeleteDialog = false }
                             ) {
                                 Text("Cancel")
                             }
@@ -680,6 +735,51 @@ fun ReportCardItem(
                     )
                 }
 
+            }
+
+            if (showAlertDialog) {
+                AlertDialog(
+                    onDismissRequest = { showAlertDialog = false },
+                    title = { when(report.status){
+                        "TBS" -> Text("Dismiss Report")
+                        "Scheduled" -> Text("Confirm Resolution")
+                        "Dismissed" -> Text("Re-evaluate Report")
+
+
+                    } },
+                    text = { when(report.status){
+                        "TBS" -> Text("Are you sure you want to Dismiss this report?")
+                        "Scheduled" -> Text("Are you sure you want to mark this report as resolved?")
+                        "Dismissed" -> Text("Are you sure you want to Re-open this report?")
+                    }},
+                    confirmButton = {
+                        TextButton(
+                            onClick = { when(report.status){
+                                "TBS" -> {showAlertDialog = false
+                                onDismissClick(report.reportId)
+                                }
+
+                                "Scheduled" -> {showAlertDialog = false
+                                    onResolvedClick(report.reportId)
+                                }
+
+                                "Dismissed" -> {showAlertDialog = false
+                                    onReEvaluateClick(report.reportId)}
+
+                            }
+                            }
+                        ) {
+                            Text("Confirm")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { showAlertDialog = false }
+                        ) {
+                            Text("Cancel")
+                        }
+                    }
+                )
             }
 
 
@@ -722,17 +822,21 @@ fun ReportCardItem(
 
                 ReportDetailLine("Title", report.title)
 
-                if (report.counselorRequest == "Yes") {
-                    Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
+
+                if (report.counselorRequest.startsWith("Yes", ignoreCase = true)) {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
+
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
                         text = "Requires Counselor Talk",
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier
-                            .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(8.dp))
-                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                            .background(MaterialTheme.colorScheme.primaryContainer,
+                                RoundedCornerShape(8.dp))
+
                     )
                 }
 
@@ -851,10 +955,11 @@ fun UserCardItem(
     val submittedList = remember(submitted) { submitted.toTitles() }
 
     Card(
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
             .fillMaxWidth()
             .animateContentSize(animationSpec = tween(durationMillis = 300))
             .clickable(
@@ -864,24 +969,13 @@ fun UserCardItem(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
 
-            // ---------- Header ----------
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = user.name.take(1).uppercase(),
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
+
+                UserAvatar(userId = user.uid.orEmpty())
 
                 Spacer(modifier = Modifier.width(12.dp))
 
@@ -1035,7 +1129,7 @@ private fun PersonDetailRow(label: String, value: String) {
 
 
 @Composable
-private fun ReportDetailLine(label: String, value: String) {
+ fun ReportDetailLine(label: String, value: String) {
     if (value.isBlank()) return
     Text(
         text = "$label: $value",

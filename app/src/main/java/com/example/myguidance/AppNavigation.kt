@@ -12,6 +12,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import java.time.LocalDate
 
 
 // Screen routes
@@ -39,6 +40,10 @@ sealed class Screen(val route: String) {
     object ReportDetail : Screen("Report/{reportId}") {
         fun createRoute(reportId: String) = "Report/$reportId"
     }
+
+    object ScheduleOn : Screen("Schedule/{date}") {
+        fun createRoute(date: String) = "Schedule/$date"   // e.g. Schedule/2026-11-05
+    }
 }
 
 @Composable
@@ -50,6 +55,7 @@ fun AppNavigation(
     val navController = rememberNavController()
     val currentUser by authViewModel.currentUser.collectAsState()
     val startDestination = if (currentUser != null) Screen.Home.route else Screen.Login.route
+    val scheduleViewModel: ScheduleViewModel = viewModel()
 
     fun goHome() {
         if (!navController.popBackStack(Screen.Home.route, inclusive = false)) {
@@ -271,6 +277,53 @@ fun AppNavigation(
                 authViewModel = authViewModel,
                 onBackClick = {navController.popBackStack()},
 
+            )
+        }
+
+        composable(
+            route = Screen.ScheduleOn.route,
+            arguments = listOf(navArgument("date") { type = NavType.StringType })
+        ) { entry ->
+            val date = entry.arguments?.getString("date")
+                ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+
+            AccentTheme { ScheduleScreen(
+                initialDate = date,
+                scheduleViewModel = scheduleViewModel,
+                onHomeClick = { navigateTo(Screen.Home.route) },
+                onReportClick = { navigateTo(Screen.Report.route) },
+                authViewModel = authViewModel,
+                onSettingClick = { navigateTo(Screen.Setting.route) },
+                onScheduleInvitationClick = { navController.navigate(Screen.Invitation.route) },
+                onScheduleClick = { navigateTo(Screen.Schedule.route) }
+            ) }
+        }
+
+
+        composable(Screen.Notifications.route) {
+            val userRole by authViewModel.userRole.collectAsState()
+            val schedules by scheduleViewModel.schedules.collectAsState()
+
+            NotificationScreen(
+                authViewModel = authViewModel,
+                postViewModel = postViewModel,
+                onBackClick = { navController.popBackStack() },
+                onNotificationClick = { item ->
+                    when {
+                        item.status.equals("Scheduled", true) -> {
+                            val date = schedules
+                                .find { it.reportId == item.reportId }
+                                ?.let { parseDateToLocalDate(it.date) }
+
+                            if (date != null)
+                                navController.navigate(Screen.ScheduleOn.createRoute(date.toString()))
+                            else
+                                navigateTo(Screen.Schedule.route)   // fallback: just open Schedule
+                        }
+                        userRole.isCounselorOrAdmin && item.reportId.isNotBlank() ->
+                            navController.navigate(Screen.ReportDetail.createRoute(item.reportId))
+                    }
+                }
             )
         }
 

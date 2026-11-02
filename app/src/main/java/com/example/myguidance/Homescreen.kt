@@ -28,7 +28,6 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.FavoriteBorder
@@ -85,7 +84,6 @@ fun HomeScreen(
     onSettingClick: () -> Unit,
     onNotificationsClick: () -> Unit = {},
 ) {
-
     val userName by authViewModel.userName.collectAsState()
     val userEmail by authViewModel.userEmail.collectAsState()
     val postsList by postViewModel.postsList.collectAsState()
@@ -139,7 +137,7 @@ fun HomeScreenContent(
     onProfileClick: () -> Unit,
     onSettingClick: () -> Unit,
     onNotificationsClick: () -> Unit = {},
-    onReportClick: () -> Unit
+    onReportClick: () -> Unit,
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
     var isFabExpanded by remember { mutableStateOf(false) }
@@ -165,7 +163,11 @@ fun HomeScreenContent(
                     ExpandableFloatingActionButton(
                         items = listOf(
                             FabSubItem(
-                                label = "Create Post",
+                                label = if(userRole.isNotStudent){
+                                    "Write Notice or report"
+                                }else{
+                                    "Write a report"
+                                },
                                 icon = Icons.Default.Edit,
                                 onClick = onCreatePostClick,
                             )
@@ -243,24 +245,12 @@ fun HomeScreenContent(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
 
-                        Box(
-                            modifier = Modifier
-                                .size(55.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary)
-                                .clickable {
-                                    onProfileClick()
-                                    android.util.Log.d("PROFILE_UI", "User avatar clicked")
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Person,
-                                contentDescription = "User Avatar",
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
+                        UserAvatar(
+                            userId = currentUserId,
+                            size = 55.dp,
+                            onClick = onProfileClick
+                        )
+
                         Spacer(modifier = Modifier.width(12.dp))
 
                         TextField(
@@ -378,6 +368,7 @@ fun HomeScreenContent(
 
                             when (selectedTab) {
                                 0 -> { // Announcements Tab
+
                                     val notice = searchedPosts.filter {
                                         it.category.equals("Notice", ignoreCase = true)
                                     }
@@ -402,6 +393,7 @@ fun HomeScreenContent(
                                                 post = post,
                                                 isLiked = isLiked,
                                                 onLikeClick = { onLikeClick(post.postId) }
+
                                             )
                                             Spacer(modifier = Modifier.height(10.dp))
                                         }
@@ -409,6 +401,7 @@ fun HomeScreenContent(
                                 }
 
                                 1 -> { // For You Tab
+
                                     if (searchedPosts.isEmpty()) {
                                         item {
                                             Box(
@@ -431,7 +424,7 @@ fun HomeScreenContent(
                                             PostItemView(
                                                 post = post,
                                                 isLiked = isLiked,
-                                                onLikeClick = { onLikeClick(post.postId) }
+                                                onLikeClick = { onLikeClick(post.postId) },
                                             )
                                             Spacer(modifier = Modifier.height(10.dp))
                                         }
@@ -489,8 +482,10 @@ fun HomeScreenContent(
 fun PostItemView(
     post: Post,
     isLiked: Boolean,
-    onLikeClick: () -> Unit
+    onLikeClick: () -> Unit,
 ) {
+
+
     Card(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -503,12 +498,9 @@ fun PostItemView(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer)
-                )
+
+                UserAvatar(userId = post.authorId)
+
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(

@@ -77,9 +77,10 @@ fun ScheduleAppointmentDesign(
     var startMinute by remember { mutableIntStateOf(0) }
     var endHour by remember { mutableIntStateOf(10) }
     var endMinute by remember { mutableIntStateOf(0) }
-
     var showStartTimePicker by remember { mutableStateOf(false) }
     var showEndTimePicker by remember { mutableStateOf(false) }
+    var locationText by remember { mutableStateOf("") }
+
 
     var purposeText by remember { mutableStateOf("") }
 
@@ -94,6 +95,8 @@ fun ScheduleAppointmentDesign(
     val formattedDate = formatDate(selectedDateInMillis)
     val formattedStartTime = formatTime(startHour, startMinute)
     val formattedEndTime = formatTime(endHour, endMinute)
+
+
 
     Scaffold(
         topBar = {
@@ -222,6 +225,26 @@ fun ScheduleAppointmentDesign(
                 )
             }
 
+            //Location
+            Text(
+                text = "Meeting Location",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            OutlinedTextField(
+                value = locationText,
+                onValueChange = { locationText = it },
+                placeholder = { Text("e.g., Guidance Office, Room 204") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true
+            )
+
+
+
+
+
             // Description / Purpose Field
             Text(
                 text = "Description",
@@ -275,7 +298,6 @@ fun ScheduleAppointmentDesign(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // 3. Render each person with a checkbox
                 selectablePeople.forEachIndexed { index, person ->
                     Row(
                         modifier = Modifier
@@ -322,14 +344,15 @@ fun ScheduleAppointmentDesign(
                         selectedDateInMillis == null -> errorMessage = "Please select a date."
                         endTotalMinutes <= startTotalMinutes -> errorMessage =
                             "End time must be after start time."
-
                         endsInThePast(selectedDateInMillis!!, endHour, endMinute) -> errorMessage =
                             "The session must end in the future, or the invitation will not show."
 
+                        selectablePeople.none { it.isChecked } ->
+                            errorMessage = "Please select at least one individual."
+
                         else -> {
                             val timeRange = "$formattedStartTime - $formattedEndTime"
-                            val fullPurpose =
-                                if (titleText.isNotBlank()) "$titleText: $purposeText" else purposeText
+
 
 
 
@@ -354,7 +377,8 @@ fun ScheduleAppointmentDesign(
                                 authorName = profile.name,
                                 date = formattedDate,
                                 time = timeRange,
-                                purpose = fullPurpose,
+                                location = locationText,
+                                purpose = purposeText,
                                 selectablePeopleList = checkedPeople,
                                 selectedDateInMillis = selectedDateInMillis!!,
                                 startHour = startHour,
@@ -366,7 +390,11 @@ fun ScheduleAppointmentDesign(
 
                                     scheduleViewModel.emailInvitedStudents(
                                         people = checkedPeople,
-                                        title = titleText, date = formattedDate, time = timeRange, purpose = fullPurpose,
+                                        title = titleText,
+                                        date = formattedDate,
+                                        time = timeRange,
+                                        location = locationText,
+                                        purpose = purposeText,
                                         fromName = profile.name
                                     )
 

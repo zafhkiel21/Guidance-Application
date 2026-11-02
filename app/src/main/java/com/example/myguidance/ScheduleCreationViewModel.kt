@@ -23,6 +23,7 @@ data class Schedules(
     val name: String = "",
     val date: String = "",
     val time: String = "",
+    val location: String = "",
     val purpose: String = "",
     val selectablePeopleList: List<Map<String, String>> = emptyList(),
     val selectablePeople: List<Map<String, String>> = emptyList(),
@@ -54,6 +55,7 @@ class ScheduleCreation : ViewModel() {
         authorName: String,
         date: String,
         time: String,
+        location: String,
         purpose: String,
         selectablePeopleList: List<Map<String, String>> = emptyList(),
         selectedDateInMillis: Long,
@@ -89,6 +91,7 @@ class ScheduleCreation : ViewModel() {
             authorName = resolvedName,
             date = date,
             time = time,
+            location = location,
             purpose = purpose,
             selectedPeople = selectablePeopleList,
             startTimeMillis = startTimeMillis,
@@ -110,6 +113,7 @@ class ScheduleCreation : ViewModel() {
         title: String,
         date: String,
         time: String,
+        location: String,
         purpose: String,
         fromName: String
     ) {
@@ -139,6 +143,7 @@ class ScheduleCreation : ViewModel() {
                         Session: ${title.ifBlank { "Guidance Session" }}
                         Date: $date
                         Time: $time
+                        Location: $location
                         Purpose: $purpose
 
                         Please open the app to accept or decline.
@@ -179,6 +184,7 @@ class ScheduleCreation : ViewModel() {
         authorName: String,
         date: String,
         time: String,
+        location: String,
         purpose: String,
         selectedPeople: List<Map<String, String>> = emptyList(),
         startTimeMillis: Long,
@@ -202,6 +208,7 @@ class ScheduleCreation : ViewModel() {
             "authorName" to authorName,
             "date" to date,
             "time" to time,
+            "location" to location,
             "purpose" to purpose,
             "selectablePeopleList" to selectedPeople,
             "timestamp" to currentTime,
@@ -261,7 +268,66 @@ class ScheduleCreation : ViewModel() {
             }
     }
 
+
+
+fun markReportAsDismissed(
+    reportId: String,
+    onSuccess: () -> Unit = {},
+    onError: (String) -> Unit = {}
+) {
+    if (reportId.isBlank()) return
+
+
+    db.collection("reports").document(reportId)
+        .update("status", "Dismissed")
+        .addOnSuccessListener {
+            onSuccess()
+        }
+        .addOnFailureListener { e ->
+            onError(e.localizedMessage ?: "Failed to update report status.")
+        }
 }
+
+
+
+fun markReportAsTBS(
+    reportId: String,
+    onSuccess: () -> Unit = {},
+    onError: (String) -> Unit = {}
+) {
+    if (reportId.isBlank()) return
+
+
+    db.collection("reports").document(reportId)
+        .update("status", "TBS")
+        .addOnSuccessListener {
+            onSuccess()
+        }
+        .addOnFailureListener { e ->
+            onError(e.localizedMessage ?: "Failed to update report status.")
+        }
+}
+
+    fun removeReport(
+        reportId: String,
+        onSuccess: () -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        if (reportId.isBlank()) return
+
+
+        db.collection("reports").document(reportId)
+            .delete()
+            .addOnSuccessListener {
+                onSuccess()
+            }
+            .addOnFailureListener { e ->
+                onError(e.localizedMessage ?: "Failed to update report status.")
+            }
+    }
+
+}
+
 
 
 

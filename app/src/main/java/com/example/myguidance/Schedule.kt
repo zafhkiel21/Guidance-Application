@@ -30,8 +30,8 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Mail
 import androidx.compose.material.icons.outlined.Report
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -39,14 +39,15 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -62,8 +63,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
@@ -143,7 +144,8 @@ fun ScheduleScreen(
     onHomeClick: () -> Unit = {},
     onScheduleInvitationClick: () -> Unit = {},
     onSettingClick: () -> Unit = {},
-    onReportClick: () -> Unit = {}
+    onReportClick: () -> Unit = {},
+    initialDate: LocalDate? = null
 ) {
 
 
@@ -157,7 +159,7 @@ fun ScheduleScreen(
     val userRole by authViewModel.userRole.collectAsState()
     val scheduleList by scheduleViewModel.schedules.collectAsState()
 
-    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+    var selectedDate by remember { mutableStateOf(initialDate?: LocalDate.now()) }
     var selectedFilterTab by remember { mutableIntStateOf(0) }
 
     val categories = listOf("All", "Appointment", "Seminar", "Other")
@@ -208,8 +210,8 @@ fun ScheduleScreen(
                 ExpandableFloatingActionButton(
                     items = listOf(
                         FabSubItem(
-                            label = "Schedule",
-                            icon = Icons.Outlined.CalendarMonth,
+                            label = "Invitations",
+                            icon = Icons.Outlined.Mail,
                             onClick = onScheduleInvitationClick
                         )
                     ),
@@ -551,6 +553,7 @@ fun DateStripHeader(
 
 @Composable
 fun ScheduleCard(item: Schedules) {
+
     val displayCategory = item.category.ifBlank { "Appointment" }
 
     val (categoryBg, categoryColor) = when (displayCategory.lowercase()) {
@@ -624,6 +627,27 @@ Column(verticalArrangement = Arrangement.SpaceBetween){
                 color = MaterialTheme.colorScheme.onSurface
             )
 
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (item.location.isNotBlank()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = item.location,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    thickness = 1.dp
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
             if (item.purpose.isNotBlank()) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
@@ -638,7 +662,7 @@ Column(verticalArrangement = Arrangement.SpaceBetween){
     }
 }
 
-private fun parseDateToLocalDate(dateStr: String): LocalDate? {
+fun parseDateToLocalDate(dateStr: String): LocalDate? {
     return try {
         val sdf = SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault())
         val date: Date = sdf.parse(dateStr) ?: return null

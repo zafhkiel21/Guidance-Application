@@ -1,5 +1,9 @@
 package com.example.myguidance
 
+import android.content.Context
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -22,9 +26,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -32,11 +36,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -47,7 +51,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -69,6 +73,20 @@ fun ProfileScreen(
     authViewModel: AuthViewModel,
     profileViewModel: ProfileViewModel = viewModel(),
 ) {
+
+    val context = LocalContext.current
+    val isUploadingPhoto by profileViewModel.isUploadingPhoto.collectAsState()
+    var photoError by remember { mutableStateOf("") }
+
+    val photoPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            photoError = ""
+            profileViewModel.uploadProfilePicture(context, uri) { photoError = it }
+        }
+    }
+
     val userRole by authViewModel.userRole.collectAsState()
     val profile by profileViewModel.userProfile.collectAsState()
     val isLoading by profileViewModel.isLoading.collectAsState()
@@ -122,19 +140,38 @@ fun ProfileScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Profile Avatar Placeholder
-                Box(
-                    modifier = Modifier
-                        .size(110.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Person,
-                        contentDescription = "User Avatar",
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(70.dp)
-                    )
+                Box(modifier = Modifier.size(110.dp)) {
+                    Avatar(photoUrl = profile.photoUrl, size = 110.dp)
+
+                    if (isUploadingPhoto) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(Alignment.Center),
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+
+                    // camera button
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surface)
+                            .clickable(enabled = !isUploadingPhoto) { photoPicker.launch("image/*") },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.CameraAlt,
+                            contentDescription = "Change profile picture",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                if (photoError.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(photoError, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -226,7 +263,8 @@ data class UserProfile(
     @field:PropertyName("section") @get:PropertyName("section") val section: String = "",
     @field:PropertyName("year") @get:PropertyName("year") val year: String = "",
     @field:PropertyName("email") @get:PropertyName("email") val email: String = "",
-    @field:PropertyName("phoneNumber") @get:PropertyName("phoneNumber") val phone: String = ""
+    @field:PropertyName("phoneNumber") @get:PropertyName("phoneNumber") val phone: String = "",
+    @field:PropertyName("photoUrl") @get:PropertyName("photoUrl") val photoUrl: String = ""
 )
 
 class ProfileViewModel : ViewModel() {
@@ -269,6 +307,34 @@ class ProfileViewModel : ViewModel() {
 
                 _isLoading.value = false
             }
+    }
+
+
+    private val _isUploadingPhoto = MutableStateFlow(false)
+    val isUploadingPhoto: StateFlow<Boolean> = _isUploadingPhoto.asStateFlow()
+
+    fun uploadProfilePicture(context: Context, uri: Uri, onError: (String) -> Unit) {
+        val userId = auth.currentUser?.uid ?: return onError("You are not signed in.")
+        _isUploadingPhoto.value = true
+
+        CloudinaryHelper.uploadMedia(
+            context = context,
+            fileUri = uri,
+            onSuccess = { url ->
+                db.collection("users").document(userId)
+                    .update("photoUrl", url)
+                    .addOnSuccessListener {  AvatarCache.set(userId, url)
+                        _isUploadingPhoto.value = false }
+                    .addOnFailureListener { e ->
+                        _isUploadingPhoto.value = false
+                        onError(e.localizedMessage ?: "Could not save the photo.")
+                    }
+            },
+            onError = { err ->
+                _isUploadingPhoto.value = false
+                onError(err)
+            }
+        )
     }
 
 }
@@ -353,7 +419,14 @@ fun ReportCardList(
             }
         }
     }
+
+
+
+
+    //end
 }
+
+
 
 
 

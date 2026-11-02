@@ -469,5 +469,7 @@ class PostViewModel : ViewModel() {
         android.text.format.DateUtils.getRelativeTimeSpanString(
             millis, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS
         ).toString()
+
+
 }
 

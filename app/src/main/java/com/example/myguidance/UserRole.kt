@@ -12,6 +12,8 @@ enum class UserRole(val key: String) {
     val isCounselorOrAdmin: Boolean
         get() = this == COUNSELOR || this == ADMIN
 
+    val isNotStudent: Boolean
+        get() = this == COUNSELOR || this == TEACHER || this == ADMIN
     val canCreatePost: Boolean
         get() = this != UNKNOWN
 

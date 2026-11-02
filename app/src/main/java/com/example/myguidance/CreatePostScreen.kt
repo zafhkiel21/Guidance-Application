@@ -59,6 +59,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -153,14 +154,14 @@ fun CreatePostScreen(
 
 
     val incidentOption = listOf(
+        "Counseling",
         "Physical fighting",
         "Improper Uniform",
         "Other"
     )
 
     val categoryOption = listOf(
-        "Announcement",
-        "Safety Announcement",
+        "Notice",
         "Seminar"
     )
 
@@ -188,13 +189,51 @@ fun CreatePostScreen(
     val formattedStartTime = formatTime(startHour, startMinute)
     val formattedEndTime = formatTime(endHour, endMinute)
 
+    LaunchedEffect(isReport) {
+        // report fields
+        textIdNumber = ""
+        wantsCounselorTalk = null
+        textRole = ""
+        textName = ""
+        textLocation = ""
+        selectedIncident = ""
+        selectedCourse = ""
+        selectedYear = ""
+        selectedSection = ""
+        peopleList.clear()
+
+        // post fields
+        selectedCategory = "Announcement"
+        titleText = ""
+
+        // shared fields
+        textContent = ""
+        selectedMediaUri = null
+        errorMessage = ""
+        selectedDateInMillis = null
+        startHour = 9
+        startMinute = 0
+        endHour = 10
+        endMinute = 0
+
+        // close dropdowns and pickers
+        isIncidentDropdownExpanded = false
+        categoryDropdownExpanded = false
+        isCourseDropdownExpanded = false
+        isYearDropdownExpanded = false
+        isSectionDropdownExpanded = false
+        showDatePicker = false
+        showStartTimePicker = false
+        showEndTimePicker = false
+    }
+
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = if (isReport) "Submit Incident Report" else "Create Post",
+                        text = if (isReport) "Submit Report" else "Create Post",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -343,11 +382,12 @@ fun CreatePostScreen(
                                 if (!isStudent) {
                                     isReport = !isReport
                                 }
+
                             },
                             enabled = !isStudent,
                             label = {
                                 Text(
-                                    text = if (isReport) "Incident Report" else "General Post",
+                                    text = if (isReport) "Report" else "General Post",
                                     fontSize = 12.sp
                                 )
                             },
@@ -443,7 +483,7 @@ fun CreatePostScreen(
                         value = selectedIncident,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Incident Type") },
+                        label = { Text("Counseling or Incident Type") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isIncidentDropdownExpanded) },
                         modifier = Modifier
                             .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
@@ -467,6 +507,17 @@ fun CreatePostScreen(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(12.dp))
+                if(selectedCategory == "other"){
+                    OutlinedTextField(
+                        value = selectedIncident,
+                        onValueChange = {selectedIncident = it},
+                        placeholder = { Text("Incident type") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true
+                    )
+                }
                 Spacer(modifier = Modifier.height(12.dp))
             }
             // Title Field
